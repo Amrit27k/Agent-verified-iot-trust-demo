@@ -1,0 +1,29 @@
+{
+  "live_session_keys": [],
+  "enrollment": {
+    "sensor-a": {
+      "enrolled": true,
+      "available": 0,
+      "outstanding": 0,
+      "revoked": false
+    },
+    "sensor-b": {
+      "enrolled": true,
+      "available": 0,
+      "outstanding": 0,
+      "revoked": false
+    }
+  },
+  "alerts": [
+    {
+      "alert": "crps_low",
+      "sensor_id": "sensor-a",
+      "remaining": 5
+    },
+    {
+      "alert": "crps_low",
+      "sensor_id": "sensor-b",
+      "remaining": 5
+    }
+  ]
+}

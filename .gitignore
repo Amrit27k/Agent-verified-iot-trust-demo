@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# Demo secrets and generated state: never commit
+*.seed
+*.crps.json
+frames.jsonl
+out/bundles
