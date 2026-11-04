@@ -31,6 +31,18 @@ def write(out: str, name: str, data) -> None:
     os.replace(path + ".tmp", path)
 
 
+def read_approvals(path: str) -> set[str]:
+    """Sensor ids a human approved for revocation. Tolerates the UTF-16 that
+    Windows PowerShell's `>>` writes, and drops anything that is not a plain id."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except FileNotFoundError:
+        return set()
+    text = raw.decode("utf-16") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8-sig", errors="replace")
+    return {line.strip() for line in text.splitlines() if line.strip()}
+
+
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
@@ -72,12 +84,13 @@ async def main() -> None:
     approval_file = os.path.join(args.out, "approved_revocations.txt")
     seen_rejections = 0
     while True:
-        if os.path.exists(approval_file):
-            with open(approval_file) as f:
-                for sensor_id in {line.strip() for line in f if line.strip()} - approved:
-                    gateway.revoke_sensor(sensor_id, "approved by human operator")
-                    approved.add(sensor_id)
-                    print(f"  REVOKED {sensor_id} (human approval)", flush=True)
+        for sensor_id in read_approvals(approval_file) - approved:
+            approved.add(sensor_id)
+            if sensor_id not in sensors:
+                print(f"  IGNORED revocation of unknown sensor id {sensor_id!r}", flush=True)
+                continue
+            gateway.revoke_sensor(sensor_id, "approved by human operator")
+            print(f"  REVOKED {sensor_id} (human approval)", flush=True)
 
         entries = list(gateway.audit)
         for e in entries[seen_rejections:]:

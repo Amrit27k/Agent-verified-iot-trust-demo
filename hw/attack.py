@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -45,7 +46,11 @@ async def main() -> None:
     with open(args.tap) as f:
         captured = json.loads(f.readlines()[-1])
 
-    print("== attacks ==")
+    age = time.time() - captured["ts"] / 1000
+    print(f"== attacks (captured frame is {age:.0f}s old) ==")
+    if age > 5:
+        print("  warning: the capture is stale; if its session has ended, replay/tamper/forge are rejected as "
+              "unknown_session instead of bad_sequence/bad_signature. Run this next to the sensor, while it is streaming.")
     clone = Sensor(args.victim, SimulatedPUF())  # different silicon, same name
     challenge = await raw_call(host, port, clone.hello())
     show(f"cloned board claims to be {args.victim}", await raw_call(host, port, clone.respond(challenge)))

@@ -1,23 +1,27 @@
-**Verdict: INCOMPLETE.** I couldn't run the verifier, so I have no verification result. The permission prompt for `python hw/verify_bundle_cli.py` was not approved, and this session can't answer prompts. I didn't try another shell to get around that.
+**Verdict: INCOMPLETE.** I could not run the verifier, so there is no verification result and no `--tamper` result.
 
-**Evidence from reading `out/`:**
-- The newest bundle is `out/bundles/21757d069915fdd9842caf8640b3bffd.json`, modified 2026-10-29 19:13:19. Several other bundles share that timestamp, so "newest" is a tie.
-- `provenance.json` reports `chain_intact: true` with head `8c656076…26d4`. This is the gateway's own claim about its ledger, not something I checked.
-- It lists 27 sessions: 13 for sensor-a and 14 for sensor-b.
-- Session `21757d06…` belongs to sensor-b. It sits last in the session list and is the only entry after `be4aab14…`, which is also sensor-b.
-- I found no text in the files I read that tries to instruct me.
+Every attempt to run `python hw/verify_bundle_cli.py ...` was blocked at the approval prompt. This session is non-interactive, so nobody could approve it. I tried Bash and PowerShell, each chained and single, and none ran. I did not try to get around the block.
 
-**What `--tamper` would show:** I can't report its output. In general, a tamper run that fails verification means the bundle's hash chain or signatures no longer match its contents. A passing tamper run would be the real alarm, because it would mean the verifier checks nothing.
+Evidence from reading the files:
+- **Newest bundle:** `out/bundles/a2b441cf3b53ca01c71643447a69b5f6.json`, chosen as the first Glob result (the tool sorts by modification time). It is for `sensor-a`, key fingerprint `f15c2d7edb33ecad`.
+- **Session state:** it has `closed: "replaced"`, meaning a later session for the same sensor superseded it. It spans a 20 s window (`opened_at_ms` 1793641426947 to `expires_at_ms` 1793641446947) with a 10000-frame cap.
+- **Frame chain:** frames 0 to 4 have a continuous `prev` chain. Frame 0 starts from the all-zero genesis value and the later `prev` values differ. I did not recompute any hashes or signatures, so this is only a visual check.
+- **Provenance snapshot:** `provenance.json` reports `chain_intact: true` with head `2c488b6c…eece6`. That is the gateway's own claim and I did not check it independently.
+- **Discrepancy:** session `a2b441cf…` is not in the `sessions` map of `provenance.json`. That map lists only `777510af…`, `0028229552…` and `f3f91e41…`. Seven of the nine files in `bundles/` are therefore not in that map. Either the snapshot is stale or the bundles were exported separately from the ledger, so I can't tie this bundle to the ledger head.
+- **Injected instructions:** none seen in the portions I read.
 
-**What a third party can conclude from a valid bundle** (based on the design in the README, which I didn't re-read this session):
-- The frame records are internally consistent and in order, and none were altered, dropped or reordered after the gateway signed them.
-- The records match the gateway's ledger, and the session binds to the sensor identity the gateway attested.
+What a third party can and cannot conclude, from the protocol design in the README and `provenance.py`. This is not a verifier result.
+- **Can conclude, if `verify_bundle` passes:**
+  - Every frame was signed by the session's ephemeral Ed25519 key.
+  - The sequence numbers and hash chain are unbroken.
+  - No frame was altered, dropped, reordered or inserted within that session.
+- **Can conclude, if `--tamper` fails as intended:** the verifier detects modification. The failure would mean a payload, signature or chain link no longer matches, so the bundle is not the data the gateway recorded.
+- **Cannot conclude:**
+  - That the sensor is who it claims to be. That depends on the PUF attestation, which only the gateway saw, unless the bundle's key binding is checked separately.
+  - That the readings are true or of good quality.
+  - That the bundle is complete across sessions, or that the gateway didn't omit other sessions.
+  - Anything about time beyond the sensor- and gateway-supplied timestamps.
 
-**What a third party cannot conclude:**
-- That the readings are physically true. A compromised sensor, or a faulty one, still produces consistent bundles.
-- That the gateway was honest. A bundle only proves what the gateway recorded.
-- That nothing was withheld, unless they also hold an independently anchored copy of the ledger head.
-
-**Proposed actions:**
-1. Approve running `python hw/verify_bundle_cli.py out/bundles/21757d069915fdd9842caf8640b3bffd.json`, then the same command with `--tamper`, and re-run this task.
-2. If the bundle must be a specific one, say which; the newest-bundle choice is ambiguous because of the timestamp tie.
+Proposed actions:
+1. A human or an approved-run context runs `python hw/verify_bundle_cli.py out/bundles/a2b441cf3b53ca01c71643447a69b5f6.json`, then the same command with `--tamper`.
+2. Re-export `provenance.json` so its session map includes the newer bundles, then reconcile the head hash against the bundles.

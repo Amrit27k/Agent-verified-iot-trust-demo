@@ -1,17 +1,10 @@
 {
   "sensor-a": {
-    "frames": 288,
-    "usable": 286,
-    "score": 0.993,
+    "frames": 95,
+    "usable": 94,
+    "score": 0.989,
     "flags": {
-      "out_of_range": 1,
-      "unparseable": 1
+      "out_of_range": 1
     }
-  },
-  "sensor-b": {
-    "frames": 288,
-    "usable": 288,
-    "score": 1.0,
-    "flags": {}
   }
 }
